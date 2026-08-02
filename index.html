@@ -371,15 +371,6 @@
     #mob #say{position:static;padding:0;background:none;order:1;display:none}
     #mob #saytext{font-size:16.5px;line-height:1.9;max-width:none;text-shadow:none}
     #mob #saymore{margin:11px 0 0;text-align:right;max-width:none}
-    #mobLbl{order:2;font-size:10.5px;letter-spacing:.3em;color:#5c6575;text-transform:uppercase}
-    #mobHots{order:3;display:flex;flex-direction:column;gap:8px}
-    .mtap{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
-      background:#0b1119;border:1px solid var(--line);border-radius:12px;
-      padding:15px 16px;font-family:inherit;font-size:15px;color:var(--ink);cursor:pointer}
-    .mtap:active{background:#151d2a;border-color:var(--accent)}
-    .mtap i{width:9px;height:9px;border-radius:50%;background:#5c6575;flex:none}
-    .mtap.door{border-color:#25423a}
-    .mtap.door i{background:var(--accent);box-shadow:0 0 9px var(--accent)}
     #mob #bag{position:static;order:4;padding:0;background:none;justify-content:flex-start}
     #mob .slot{padding:11px 15px;font-size:14px}
     #mob #hud{position:static;order:5;flex-wrap:wrap;padding:0;background:none;gap:8px;margin-top:2px}
@@ -387,9 +378,9 @@
     #mob .btn{padding:12px 14px;font-size:14px;flex:1;min-width:86px;text-align:center}
     #mob #bSet{flex:0 0 58px;min-width:0}
     #mob #bLang{flex:0 0 88px;min-width:0}
-    #mob.talking #mobLbl,#mob.talking #mobHots{display:none}
-    #hint{display:none!important}
-    #hots .tip{display:none}
+    /* ปุ่ม "แสดงจุดที่กดได้" ยังต้องมีในโหมดง่าย — กระเป๋าย้ายลงแผงแล้วเลยเลื่อนลงได้ */
+    #hint{bottom:8px;right:8px;padding:6px 10px;font-size:11.5px}
+    #hots .tip{font-size:10.5px;padding:3px 7px}
     .titem{padding:11px 0;font-size:19px;letter-spacing:1.6px}
     #tMenu{gap:2px}
     .mpCard input{font-size:16px}
@@ -436,6 +427,17 @@
     .dinfo{min-height:0}
     .dhints{margin-top:12px}
   }
+
+  /* ---------- เลือกโหมดยาก-ง่าย ---------- */
+  .mdopt{display:block;width:100%;text-align:left;background:#0c1119;border:1px solid var(--line);
+    border-radius:13px;padding:17px 19px;margin-bottom:11px;cursor:pointer;font-family:inherit;
+    color:var(--ink);transition:.16s}
+  .mdopt:hover{border-color:var(--accent);background:#101a24}
+  .mdopt:active{transform:scale(.99)}
+  .mdopt b{display:block;font-family:"Noto Serif Thai",Georgia,serif;font-weight:500;
+    font-size:18px;margin-bottom:5px}
+  .mdopt span{display:block;font-size:12.5px;color:var(--dim);line-height:1.75}
+  @media (max-width:820px){.mdopt{padding:19px 17px}.mdopt b{font-size:17px}}
 
   /* ================= เล่นกับเพื่อน ================= */
   #mpCur{position:absolute;inset:0;pointer-events:none;z-index:40;overflow:hidden}
@@ -564,9 +566,22 @@
 
     <div id="say"><div id="saytext"></div><div id="saymore"></div></div>
   </div>
-  <div id="mob"><div id="mobLbl">สิ่งที่กดได้</div><div id="mobHots"></div></div>
+  <div id="mob"></div>
 </div>
 
+<div class="mod" id="mMode"><div class="sheet" style="max-width:520px">
+  <h3 style="margin:0 0 6px;font-family:'Noto Serif Thai',Georgia,serif;font-weight:500;font-size:21px">
+    เลือกระดับความยาก</h3>
+  <div style="font-size:11px;letter-spacing:.34em;color:var(--dim);margin-bottom:20px">DIFFICULTY</div>
+  <button class="mdopt" id="mdEasy">
+    <b>ง่าย</b><span>มีเส้นบอกว่าตรงไหนกดได้ · เหมาะกับเล่นครั้งแรก หรือเล่นกับเพื่อนหลายคน</span>
+  </button>
+  <button class="mdopt" id="mdHard">
+    <b>ยาก</b><span>ไม่บอกอะไรเลย ต้องกวาดสายตาหาเอง · บรรยากาศเต็ม ๆ</span>
+  </button>
+  <div style="margin-top:15px;font-size:11.5px;color:#6f7787;line-height:1.8">
+    เปลี่ยนทีหลังได้ที่หน้าตั้งค่า</div>
+</div></div>
 <div class="mod" id="mNote"><div class="sheet"><div class="paper" id="noteBody"></div>
   <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" data-close>OK</button></div></div></div>
 
@@ -787,6 +802,9 @@ const STR = {
   useWhat:      { th: "จะใช้กับอะไร?",          en: "Use it on what?" },
   cantUse:      { th: "ใช้ตรงนี้ไม่ได้",        en: "That does nothing here." },
   showHotspots: { th: "แสดงจุดที่กดได้",        en: "Show hotspots" },
+  difficulty:   { th: "ระดับความยาก",            en: "Difficulty" },
+  easyMode:     { th: "ง่าย",                    en: "Easy" },
+  hardMode:     { th: "ยาก",                     en: "Hard" },
 
   lockedTitle:  { th: "ล็อกอยู่",              en: "Locked" },
   codeEnter:    { th: "ใส่รหัส",               en: "Enter code" },
@@ -2008,6 +2026,11 @@ function openSet(){
     S.sound = !S.sound; save();
     if(amb && AC) amb.gain.linearRampToValueAtTime(S.sound ? .16 : 0, AC.currentTime + .4);
   });
+  row(L("difficulty"), EASY ? L("easyMode") : L("hardMode"), ()=>{
+    EASY = !EASY;
+    try{ localStorage.setItem("villa-easy", EASY ? "1" : "0"); }catch(e){}
+    applyMode();
+  });
   row(L("btnHowTo"), "?", ()=>{ closeM("mSet"); showNote0(L("btnHowTo"), L("howToBody")); });
   row(L("reset"), "⟲", ()=>{ if(confirm(L("resetConfirm"))){ wipe(); location.reload(); } });
   row("เวอร์ชันเกม", MP_BUILD, ()=>{
@@ -2047,7 +2070,7 @@ document.addEventListener("keydown", e=>{
 
 /* ---------- โหมดมือถือแนวตั้ง: ภาพบน + แผงกดล่าง ---------- */
 (function mobileMode(){
-  const mob = $("mob"), frame = $("frame"), lbl = $("mobLbl"), list = $("mobHots");
+  const mob = $("mob"), frame = $("frame");
   if(!mob) return;
   const portrait = () => matchMedia("(orientation:portrait) and (max-width:820px)").matches;
   let inPanel = null;
@@ -2056,31 +2079,9 @@ document.addEventListener("keydown", e=>{
     const p = portrait();
     if(p === inPanel) return;
     inPanel = p;
-    if(p){ mob.insertBefore($("say"), lbl); mob.appendChild($("bag")); mob.appendChild($("hud")); }
+    if(p){ mob.appendChild($("say")); mob.appendChild($("bag")); mob.appendChild($("hud")); }
     else  { frame.appendChild($("hud")); frame.appendChild($("bag")); frame.appendChild($("say")); }
   }
-
-  /* ปุ่มในแผง = กดแทนจุดบนภาพ ใช้ logic เดิมทั้งหมด */
-  function paint(){
-    if(!portrait()) return;
-    const hs = [...hots.querySelectorAll(".hs")];
-    list.innerHTML = "";
-    lbl.style.display = hs.length ? "" : "none";
-    hs.forEach(h=>{
-      const b = document.createElement("button");
-      b.className = "mtap" + (h.classList.contains("door") ? " door" : "");
-      const i = document.createElement("i");
-      const sp = document.createElement("span");
-      const tip = h.querySelector(".tip");
-      sp.textContent = tip ? tip.textContent : "";
-      b.appendChild(i); b.appendChild(sp);
-      b.addEventListener("click", ()=> h.click());
-      list.appendChild(b);
-    });
-  }
-
-  const _draw = drawHots;
-  drawHots = function(){ _draw.apply(this, arguments); try{ paint(); }catch(e){} };
 
   /* มีบทพูดอยู่ → ซ่อนรายการจุดกด ให้อ่านสบายเหมือนนิยายภาพ */
   try{
@@ -2096,12 +2097,43 @@ document.addEventListener("keydown", e=>{
     if(k2) k2.textContent = "ลากนิ้ว";
   }
 
-  addEventListener("resize", ()=>{ place(); paint(); });
-  addEventListener("orientationchange", ()=> setTimeout(()=>{ place(); paint(); }, 260));
+  addEventListener("resize", place);
+  addEventListener("orientationchange", ()=> setTimeout(place, 260));
   place();
 })();
 
-const MP_BUILD = "20260802-1648";
+
+/* ---------- เลือกระดับความยากก่อนเข้าเล่น ---------- */
+/* ง่าย = โชว์เส้นจุดที่กดได้ตลอด · ยาก = ไม่มีให้เลย (ปุ่ม "แสดงจุดที่กดได้" หายไปด้วย)
+   เก็บนอก S เพราะ beginNow() ล้าง S ทิ้งทุกครั้งที่เริ่มเกมใหม่ */
+let EASY = true;
+try{ const v = localStorage.getItem("villa-easy"); if(v !== null) EASY = (v === "1"); }catch(e){}
+
+function applyMode(){
+  reveal = EASY;
+  const h = $("hint"); if(h) h.style.display = EASY ? "" : "none";
+  try{ drawHots(); }catch(e){}
+}
+function askMode(next){
+  const pick = v => {
+    EASY = v;
+    try{ localStorage.setItem("villa-easy", v ? "1" : "0"); }catch(e){}
+    applyMode(); closeM("mMode"); next();
+  };
+  $("mdEasy").onclick  = ()=>{ sfx("click"); pick(true); };
+  $("mdHard").onclick  = ()=>{ sfx("click"); pick(false); };
+  openM("mMode");
+}
+{
+  const _begin = begin;
+  /* เริ่มใหม่ = ถามทุกครั้ง · เล่นต่อ = ใช้โหมดเดิม */
+  begin = function(cont){
+    if(cont){ applyMode(); _begin(true); }
+    else askMode(()=> _begin(false));
+  };
+}
+
+const MP_BUILD = "20260802-1721";
 /* ============================================================
    MP — เล่นกับเพื่อน (ไม่มีเซิร์ฟเวอร์)
    ส่งพร้อมกันหลายช่อง แล้วกรองข้อความซ้ำทิ้ง
