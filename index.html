@@ -225,7 +225,8 @@
 
   .dstage{perspective:1900px;perspective-origin:52% 46%;display:flex;align-items:center;
     justify-content:center;height:100%}
-  .dbook{position:relative;width:min(56vw,690px);aspect-ratio:1.42/1;transform-style:preserve-3d;cursor:grab}
+  .dbook{position:relative;width:min(56vw,690px);aspect-ratio:1.42/1;transform-style:preserve-3d;cursor:grab;
+    touch-action:none}
   .dbook.grab{cursor:grabbing}
   .dboard{position:absolute;top:0;height:100%;width:50%;transform-style:preserve-3d;
     background:linear-gradient(160deg,#c2a878,#a2895a);box-shadow:inset 0 0 60px #00000038}
@@ -360,6 +361,82 @@
   #load .pct{font-size:12px;letter-spacing:.14em;color:var(--dim);min-width:40px;text-align:right;
     font-variant-numeric:tabular-nums}
 
+  /* ================= มือถือ ================= */
+  #mob{display:none}
+  @media (orientation:portrait) and (max-width:820px){
+    #stage{flex-direction:column;align-items:stretch;justify-content:flex-start;overflow-y:auto}
+    #frame{width:100%;max-width:none;max-height:none;flex:none}
+    #mob{display:flex;flex-direction:column;gap:11px;flex:1;background:#05070a;
+         padding:15px 14px calc(20px + env(safe-area-inset-bottom))}
+    #mob #say{position:static;padding:0;background:none;order:1;display:none}
+    #mob #saytext{font-size:16.5px;line-height:1.9;max-width:none;text-shadow:none}
+    #mob #saymore{margin:11px 0 0;text-align:right;max-width:none}
+    #mobLbl{order:2;font-size:10.5px;letter-spacing:.3em;color:#5c6575;text-transform:uppercase}
+    #mobHots{order:3;display:flex;flex-direction:column;gap:8px}
+    .mtap{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+      background:#0b1119;border:1px solid var(--line);border-radius:12px;
+      padding:15px 16px;font-family:inherit;font-size:15px;color:var(--ink);cursor:pointer}
+    .mtap:active{background:#151d2a;border-color:var(--accent)}
+    .mtap i{width:9px;height:9px;border-radius:50%;background:#5c6575;flex:none}
+    .mtap.door{border-color:#25423a}
+    .mtap.door i{background:var(--accent);box-shadow:0 0 9px var(--accent)}
+    #mob #bag{position:static;order:4;padding:0;background:none;justify-content:flex-start}
+    #mob .slot{padding:11px 15px;font-size:14px}
+    #mob #hud{position:static;order:5;flex-wrap:wrap;padding:0;background:none;gap:8px;margin-top:2px}
+    #mob #where{flex:1 0 100%;font-size:12px;letter-spacing:.24em;margin-bottom:3px}
+    #mob .btn{padding:12px 14px;font-size:14px;flex:1;min-width:86px;text-align:center}
+    #mob #bSet{flex:0 0 58px;min-width:0}
+    #mob #bLang{flex:0 0 88px;min-width:0}
+    #mob.talking #mobLbl,#mob.talking #mobHots{display:none}
+    #hint{display:none!important}
+    #hots .tip{display:none}
+    .titem{padding:11px 0;font-size:19px;letter-spacing:1.6px}
+    #tMenu{gap:2px}
+    .mpCard input{font-size:16px}
+    .sheet,.paper{font-size:15.5px}
+  }
+  /* มือถือแนวนอน — จอเตี้ย บีบทุกอย่างให้พอดี */
+  @media (orientation:landscape) and (max-height:520px){
+    #frame{max-height:100vh}
+    .btn{padding:6px 10px;font-size:12px}
+    #say{padding:14px 5vw 15px}
+    #saytext{font-size:15px;line-height:1.72}
+    #bag{padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
+    .slot{padding:5px 10px;font-size:12px}
+  }
+  /* ---- แฟ้มคดีบนมือถือแนวตั้ง: แฟ้มอยู่บน ข้อความอยู่ล่าง เลื่อนอ่านได้ ---- */
+  @media (orientation:portrait) and (max-width:820px){
+    .dwrap{display:flex;flex-direction:column;align-items:stretch;gap:10px;
+      padding:14px 16px calc(72px + env(safe-area-inset-bottom));overflow-y:auto}
+    .dstage{order:1;flex:none;height:auto;padding:14px 0 46px;
+      perspective:1500px;perspective-origin:50% 50%}
+    .dbook{width:min(80vw,360px)}
+    .dside{order:2;padding:0}
+    .dside h2{font-size:22px}
+    .dcount{margin-top:14px}
+    .dinfo{min-height:0;margin-top:14px}
+    .dinfo p,.dinfo .e{max-width:none}
+    .dhints{margin-top:18px;gap:8px 16px}
+    .dcloseb{left:16px;bottom:calc(16px + env(safe-area-inset-bottom))}
+    .dlabel{padding:9px 11px;max-width:88%}
+    .dlabel .t{font-size:12px;line-height:1.3}
+    .dlabel .s{font-size:7px;letter-spacing:.16em;white-space:normal}
+    .dstamp{font-size:9px;padding:4px 8px;border-width:2px}
+    .dhintopen{bottom:-30px;font-size:10.5px;letter-spacing:.16em}
+    .dnav{width:46px;height:46px}
+    .ddoc,.dcardp{font-size:12.5px}
+    .dcf.f{padding:9% 9%;overflow:hidden}
+    /* ตอนแฟ้มยังปิด ปกอยู่ครึ่งขวาของกล่อง เลื่อนเข้ามาให้ดูอยู่กลางจอ */
+    .dstage{transition:transform .9s cubic-bezier(.55,.05,.25,1)}
+    .dstage:has(.dbook:not(.opened)){transform:translateX(-12%)}
+  }
+  @media (orientation:landscape) and (max-height:520px){
+    .dbook{width:min(46vw,430px)}
+    .dside h2{font-size:20px}
+    .dinfo{min-height:0}
+    .dhints{margin-top:12px}
+  }
+
   /* ================= เล่นกับเพื่อน ================= */
   #mpCur{position:absolute;inset:0;pointer-events:none;z-index:40;overflow:hidden}
   .mpc{position:absolute;transform:translate(-2px,-2px);transition:left .09s linear,top .09s linear}
@@ -440,6 +517,24 @@
   #mpDrop button{font-family:inherit;font-size:11.5px;padding:5px 12px;border-radius:99px;
     cursor:pointer;border:1px solid #b4553d;background:#b4553d;color:#fff2ee;font-weight:600}
   #mpDrop button:hover{filter:brightness(1.12)}
+
+  /* ---- มือถือ ---- */
+  @media (max-width:820px){
+    .mpCard{padding:22px 20px;border-radius:14px}
+    .mpCard input{font-size:16px;padding:13px}   /* 16px กัน iOS ซูมจอตอนแตะช่องกรอก */
+    .mpBtn{padding:14px;font-size:14.5px}
+    .mpRow{flex-wrap:wrap}
+    .mpP{padding:11px 13px}
+    #mpBar{font-size:10.5px;gap:5px;padding:5px 8px;max-width:94%;flex-wrap:wrap;justify-content:center}
+    #mpBar .rm{display:none}
+    .mpT{font-size:11.5px;padding:7px 12px}
+    #mpToast{top:auto;bottom:8px}
+    .mpc b{font-size:9.5px;padding:1px 5px}
+  }
+  @media (orientation:portrait) and (max-width:820px){
+    #mpToast{bottom:auto;top:calc(56.25vw + 8px)}   /* ใต้ภาพพอดี */
+    #mpDrop{top:calc(56.25vw - 44px)}
+  }
 </style>
 </head>
 <body>
@@ -469,6 +564,7 @@
 
     <div id="say"><div id="saytext"></div><div id="saymore"></div></div>
   </div>
+  <div id="mob"><div id="mobLbl">สิ่งที่กดได้</div><div id="mobHots"></div></div>
 </div>
 
 <div class="mod" id="mNote"><div class="sheet"><div class="paper" id="noteBody"></div>
@@ -482,8 +578,8 @@
     <div class="dcount" id="dCount"></div>
     <div class="dinfo" id="dInfo"></div>
     <div class="dhints">
-      <div class="dhint"><b>คลิก</b><span id="dH1">หยิบขึ้นมาดู</span></div>
-      <div class="dhint"><b>ลาก</b><span id="dH2">หมุนแฟ้ม</span></div>
+      <div class="dhint"><b id="dK1">คลิก</b><span id="dH1">หยิบขึ้นมาดู</span></div>
+      <div class="dhint"><b id="dK2">ลาก</b><span id="dH2">หมุนแฟ้ม</span></div>
       <div class="dhint"><b>← →</b><span id="dH3">พลิกหน้า</span></div>
     </div>
   </div>
@@ -1948,7 +2044,64 @@ document.addEventListener("keydown", e=>{
   if(e.code==="KeyC"){ openCase(); }
 });
 
-const MP_BUILD = "20260802-1554";
+
+/* ---------- โหมดมือถือแนวตั้ง: ภาพบน + แผงกดล่าง ---------- */
+(function mobileMode(){
+  const mob = $("mob"), frame = $("frame"), lbl = $("mobLbl"), list = $("mobHots");
+  if(!mob) return;
+  const portrait = () => matchMedia("(orientation:portrait) and (max-width:820px)").matches;
+  let inPanel = null;
+
+  function place(){
+    const p = portrait();
+    if(p === inPanel) return;
+    inPanel = p;
+    if(p){ mob.insertBefore($("say"), lbl); mob.appendChild($("bag")); mob.appendChild($("hud")); }
+    else  { frame.appendChild($("hud")); frame.appendChild($("bag")); frame.appendChild($("say")); }
+  }
+
+  /* ปุ่มในแผง = กดแทนจุดบนภาพ ใช้ logic เดิมทั้งหมด */
+  function paint(){
+    if(!portrait()) return;
+    const hs = [...hots.querySelectorAll(".hs")];
+    list.innerHTML = "";
+    lbl.style.display = hs.length ? "" : "none";
+    hs.forEach(h=>{
+      const b = document.createElement("button");
+      b.className = "mtap" + (h.classList.contains("door") ? " door" : "");
+      const i = document.createElement("i");
+      const sp = document.createElement("span");
+      const tip = h.querySelector(".tip");
+      sp.textContent = tip ? tip.textContent : "";
+      b.appendChild(i); b.appendChild(sp);
+      b.addEventListener("click", ()=> h.click());
+      list.appendChild(b);
+    });
+  }
+
+  const _draw = drawHots;
+  drawHots = function(){ _draw.apply(this, arguments); try{ paint(); }catch(e){} };
+
+  /* มีบทพูดอยู่ → ซ่อนรายการจุดกด ให้อ่านสบายเหมือนนิยายภาพ */
+  try{
+    new MutationObserver(()=>{
+      mob.classList.toggle("talking", getComputedStyle($("say")).display !== "none");
+    }).observe($("say"), {attributes:true, attributeFilter:["style"]});
+  }catch(e){}
+
+  /* จอสัมผัส — เปลี่ยนคำว่า "คลิก" เป็น "แตะ" ให้ตรงกับที่ผู้เล่นทำจริง */
+  if(matchMedia("(pointer:coarse)").matches){
+    const k1=$("dK1"), k2=$("dK2");
+    if(k1) k1.textContent = "แตะ";
+    if(k2) k2.textContent = "ลากนิ้ว";
+  }
+
+  addEventListener("resize", ()=>{ place(); paint(); });
+  addEventListener("orientationchange", ()=> setTimeout(()=>{ place(); paint(); }, 260));
+  place();
+})();
+
+const MP_BUILD = "20260802-1648";
 /* ============================================================
    MP — เล่นกับเพื่อน (ไม่มีเซิร์ฟเวอร์)
    ส่งพร้อมกันหลายช่อง แล้วกรองข้อความซ้ำทิ้ง
