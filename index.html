@@ -1954,7 +1954,7 @@ const MP = {
         this.sends.push(act.send);
         const ch = {name:key, peers:0, up:true};
         this.chans.push(ch);
-        act.onMessage(d => this.recv(d));
+        act.onMessage = (d) => this.recv(d);   /* เวอร์ชันนี้ต้อง 'กำหนดค่า' ไม่ใช่ 'เรียก' */
         r.onPeerJoin(()=>{ ch.peers++; setTimeout(()=>this.raw({t:"hi"}), 250); this.status(); });
         r.onPeerLeave(()=>{ ch.peers = Math.max(0, ch.peers-1); this.status(); });
       }catch(e){ console.warn("ช่อง "+key+" ต่อไม่ได้:", e.message); }
