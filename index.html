@@ -417,6 +417,29 @@
   .mpP .st{font-size:11.5px;color:var(--dim)}
   .mpP.rdy{border-color:var(--accent)}
   .mpP.rdy .st{color:var(--accent)}
+  .mpP.off{opacity:.5;border-style:dashed}
+  .mpP.off .st{color:#e0684f}
+
+  /* แจ้งเตือนเพื่อนเข้า-ออก */
+  #mpToast{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:45;
+    display:flex;flex-direction:column;gap:7px;align-items:center;pointer-events:none}
+  .mpT{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:99px;
+    background:#0a0d13ee;border:1px solid var(--line);backdrop-filter:blur(8px);
+    font-size:12px;color:#e8eaee;white-space:nowrap;box-shadow:0 8px 26px #000a;
+    animation:mpTin .34s cubic-bezier(.2,.9,.3,1.3) both}
+  .mpT .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .mpT.out{animation:mpTout .45s ease-in forwards}
+  @keyframes mpTin{from{opacity:0;transform:translateY(-11px) scale(.94)}}
+  @keyframes mpTout{to{opacity:0;transform:translateY(-9px)}}
+
+  /* แถบเตือนตอนเราหลุดเอง */
+  #mpDrop{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:46;display:none;
+    align-items:center;gap:11px;padding:9px 13px;border-radius:99px;background:#2a1512ee;
+    border:1px solid #7d3a2b;backdrop-filter:blur(8px);font-size:12px;color:#f0b9a8}
+  #mpDrop.on{display:flex}
+  #mpDrop button{font-family:inherit;font-size:11.5px;padding:5px 12px;border-radius:99px;
+    cursor:pointer;border:1px solid #b4553d;background:#b4553d;color:#fff2ee;font-weight:600}
+  #mpDrop button:hover{filter:brightness(1.12)}
 </style>
 </head>
 <body>
@@ -429,6 +452,8 @@
     <div id="hots"></div>
     <div id="mpCur"></div>
     <div id="mpBar"></div>
+    <div id="mpToast"></div>
+    <div id="mpDrop"><span id="mpDropTx">หลุดจากเพื่อนแล้ว</span><button id="mpDropGo">ต่อใหม่</button></div>
     <div id="toast"></div>
 
     <div id="hud">
@@ -1930,14 +1955,27 @@ const MP = {
   on:false, room:null, me:null, name:"", color:"#8fd6b0", t0:0,
   peers:{}, seen:new Set(), q:[], sayGo:null, pendingTap:0, bc:null,
   ready:false, inGame:false, sends:[], chans:[], _stuck:0,
+  joining:false, wantSync:false, wasOff:false, left:{},
+  GONE:15000,                       /* เงียบเกิน 15 วิ = ถือว่าหลุด (เต้นหัวใจทุก 4 วิ) */
   COLORS:["#8fd6b0","#e58fc0","#d8b46a","#7fb6ff","#ff9a76","#b79aff","#6fe3d2","#f5e06a"],
 
   id(){ return Math.random().toString(36).slice(2,10); },
 
+  /* id ประจำแท็บ — กด F5 หรือหลุดแล้วเข้าใหม่ เพื่อนจะรู้ว่าเป็นคนเดิม */
+  myId(room){
+    const k = "villa-mp-me-" + room;
+    try{
+      let v = sessionStorage.getItem(k);
+      if(!v){ v = this.id(); sessionStorage.setItem(k, v); }
+      return v;
+    }catch(e){ return this.id(); }
+  },
+
   start(room, name){
     if(this.on) return;
     this.room = room; this.name = (name||"ผู้เล่น").slice(0,14);
-    this.me = this.id(); this.t0 = Date.now(); this.on = true;
+    this.me = this.myId(room); this.t0 = Date.now(); this.on = true;
+    try{ sessionStorage.setItem("villa-mp-name", this.name); }catch(e){}
     this.color = this.COLORS[Math.abs([...this.me].reduce((a,c)=>a+c.charCodeAt(0),0)) % this.COLORS.length];
 
     try{
@@ -1981,13 +2019,48 @@ const MP = {
       if(this._stuck > 30){ busy = false; this._stuck = 0; drawHots(); }
       this.drain(); this.status();
     }, 400);
+    setInterval(()=>{ if(this.on) this.watch(); }, 1500);   /* คอยดูว่าใครหลุด/กลับมา */
     this.hookCursor();
     $("mpBar").classList.add("on");
     this.paintBar();
   },
 
   keeper(){ return !this.alive().some(p => p.t0 < this.t0 || (p.t0===this.t0 && p.id < this.me)); },
-  alive(){ const n = Date.now(); return Object.values(this.peers).filter(p => n - p.t < 20000); },
+  alive(){ const n = Date.now(); return Object.values(this.peers).filter(p => n - p.t < this.GONE); },
+  /* คนที่หลุดไปแต่ยังไม่หายไปนาน — ยังโชว์ในรายชื่อว่า "หลุดแล้ว" */
+  seenLately(){ const n = Date.now(); return Object.values(this.peers).filter(p => n - p.t < 120000); },
+
+  /* ---------- เตือนเพื่อนเข้า-ออก ---------- */
+  toast(txt, color){
+    const w = $("mpToast"); if(!w) return;
+    const el = document.createElement("div"); el.className = "mpT";
+    el.innerHTML = '<i class="dot" style="background:'+(color||"#8d97a6")+'"></i><span>'+esc(txt)+'</span>';
+    w.appendChild(el);
+    while(w.children.length > 3) w.firstChild.remove();
+    setTimeout(()=>{ el.classList.add("out"); setTimeout(()=>el.remove(), 480); }, 4200);
+  },
+
+  watch(){
+    const n = Date.now();
+    for(const p of Object.values(this.peers)){
+      const gone = n - p.t > this.GONE;
+      if(gone && !p.gone){
+        p.gone = true; this.left[p.name] = n;
+        this.toast(p.name + " หลุดไปแล้ว", "#e0684f"); this.status();
+      } else if(!gone && p.gone){
+        p.gone = false;
+        this.toast(p.name + " กลับเข้ามาแล้ว", p.color); this.status();
+      }
+      if(n - p.t > 180000){ delete this.peers[p.id]; this.status(); }   /* หายไป 3 นาที ค่อยลบชื่อ */
+    }
+    /* ตัวเราเองหลุดจากทุกคนไหม */
+    const off = this.inGame && Object.keys(this.peers).length > 0 && this.alive().length === 0;
+    if(off !== this.wasOff){
+      this.wasOff = off;
+      const d = $("mpDrop"); if(d) d.classList.toggle("on", off);
+      if(off) this.toast("หลุดจากเพื่อนแล้ว กำลังลองต่อใหม่…", "#e0684f");
+    }
+  },
 
   raw(m){
     m._i = this.id(); m._f = this.me; m._n = this.name; m._c = this.color;
@@ -2006,10 +2079,12 @@ const MP = {
     const p = this.peers[m._f];
     if(!p){
       this.peers[m._f] = {id:m._f, name:m._n, color:m._c, t0:m._t||Date.now(),
-                          t:Date.now(), ready:!!m._r, inGame:!!m._g};
+                          t:Date.now(), ready:!!m._r, inGame:!!m._g, gone:false};
+      const back = this.left[m._n] && (Date.now() - this.left[m._n] < 1800000);
+      this.toast(m._n + (back ? " กลับเข้ามาแล้ว" : " เข้าห้องมาแล้ว"), m._c);
       this.raw({t:"hi"});
-      if(this.keeper()) setTimeout(()=>{ if(!busy && !this.sayGo)
-        this.raw({t:"sync", S:JSON.parse(JSON.stringify(S))}); }, 300);
+      if(this.inGame) setTimeout(()=>{ if(!busy && !this.sayGo)
+        this.raw({t:"sync", S:JSON.parse(JSON.stringify(S))}); }, 400);
       this.status();
     } else {
       p.t = Date.now(); p.ready = !!m._r; p.inGame = !!m._g; if(m._n) p.name = m._n;
@@ -2024,10 +2099,23 @@ const MP = {
     if(m.t === "ring" && !mine){ this.ring(m.x, m.y, m._c); return; }
     if(m.t === "tap"){ if(this.sayGo) this.sayGo(); else this.pendingTap = Date.now(); return; }
     if(m.t === "hot"){ this.runHot(m.sc, m.hid); return; }
-    if(m.t === "sync" && !mine && (m._t||0) < this.t0){
-      if(busy || this.sayGo || this.q.length) return;
+    /* มีคนเพิ่งเข้ามากลางเกม ขอสถานะล่าสุด — ใครที่อยู่ในเกมอยู่ก็ส่งให้ */
+    if(m.t === "ask" && !mine){
+      if(this.inGame) setTimeout(()=>this.raw({t:"sync", S:JSON.parse(JSON.stringify(S))}), 150);
+      return;
+    }
+    if(m.t === "sync" && !mine){
+      if(this.joining) return;                       /* ยังโหลดอยู่ เดี๋ยวค่อยรับ */
+      const older = (m._t||0) < this.t0;
+      if(!this.wantSync && !older) return;
+      if(!this.wantSync && (busy || this.sayGo || this.q.length)) return;
       const was = S.scene, keep = S.lang;
       Object.assign(S, m.S); S.lang = keep;
+      if(this.wantSync){                             /* เพิ่งเข้ามากลางเกม — เคลียร์คิวค้างทิ้ง */
+        this.wantSync = false; this.q.length = 0; busy = false; this.sayGo = null;
+        this.toast("เข้าร่วมเกมที่เล่นอยู่แล้ว", this.color);
+        this.showScene(m.S.scene); return;
+      }
       if(m.S.scene !== was) this.showScene(m.S.scene); else { refreshHud(); drawHots(); }
       return;
     }
@@ -2111,10 +2199,12 @@ const MP = {
       ? ("ต่อติดแล้ว · อยู่ในห้องนี้ " + (ps.length+1) + " คน")
       : "กำลังหาเพื่อนในห้องนี้…");
     const all = [{name:this.name+" (คุณ)", color:this.color, ready:this.ready, inGame:this.inGame}]
-      .concat(ps.map(p=>({name:p.name, color:p.color, ready:p.ready, inGame:p.inGame})));
-    $("mpList").innerHTML = all.map(p=>'<div class="mpP'+(p.ready||p.inGame?' rdy':'')+'">'
+      .concat(this.seenLately().map(p=>({name:p.name, color:p.color, ready:p.ready,
+                                          inGame:p.inGame, gone:p.gone})));
+    $("mpList").innerHTML = all.map(p=>'<div class="mpP'+(p.gone?' off':(p.ready||p.inGame?' rdy':''))+'">'
       + '<i class="dot" style="background:'+p.color+'"></i><span class="nm">'+esc(p.name)+'</span>'
-      + '<span class="st">'+(p.inGame?"อยู่ในเกมแล้ว":(p.ready?"พร้อม":"ยังไม่พร้อม"))+'</span></div>').join('');
+      + '<span class="st">'+(p.gone?"หลุดไปแล้ว":(p.inGame?"อยู่ในเกมแล้ว":(p.ready?"พร้อม":"ยังไม่พร้อม")))
+      + '</span></div>').join('');
     const inGame = ps.some(p=>p.inGame);
     const allReady = this.ready && ps.length > 0 && ps.every(p=>p.ready || p.inGame);
     const go = $("mpGo");
@@ -2129,6 +2219,7 @@ const MP = {
   }
 };
 window.MP = MP;
+MP.st = ()=>S;          /* ไว้ตรวจสถานะตอนเทสต์ */
 
 /* ---------- หน้าล็อบบี้ ---------- */
 (function lobby(){
@@ -2137,13 +2228,50 @@ window.MP = MP;
       const q = new URLSearchParams(location.search).get("room");
       $("mpRoom").value = q || ("villa-" + Math.floor(1000+Math.random()*9000));
     }
+    if(!$("mpName").value){
+      try{ $("mpName").value = sessionStorage.getItem("villa-mp-name") || ""; }catch(e){}
+    }
     $("mpLobby").classList.add("on");
+    /* กลับมาจากปุ่ม "ต่อใหม่" — เข้าห้องเดิมให้เลย ไม่ต้องกรอกซ้ำ */
+    const p = new URLSearchParams(location.search);
+    if(p.get("kb") === "1" && !MP.on && $("mpName").value){
+      setTimeout(()=>$("mpJoin").click(), 60);
+      const iv = setInterval(()=>{
+        if(!MP.on) return;
+        if(MP.alive().some(x=>x.inGame)){ clearInterval(iv); $("mpGo").click(); }
+      }, 900);
+      setTimeout(()=>clearInterval(iv), 40000);
+    }
   };
-  window.__mpStartGame = ()=>{
+  /* live = เข้าร่วมเกมที่เพื่อนเล่นค้างอยู่ ต้องดึงสถานะล่าสุดมาทับ */
+  window.__mpStartGame = (live)=>{
     $("mpLobby").classList.remove("on");
     MP.inGame = true; MP.raw({t:"hi"});
-    if($("title").style.display !== "none") begin(false);
+    if($("title").style.display === "none"){
+      if(live){ MP.wantSync = true; MP.raw({t:"ask"}); }
+      return;
+    }
+    MP.joining = !!live;
+    begin(false);
+    if(!live) return;
+    /* รอหน้าโหลดจบก่อน แล้วค่อยขอสถานะล่าสุดจากเพื่อน */
+    const iv = setInterval(()=>{
+      if($("load").classList.contains("on") || $("title").style.display !== "none") return;
+      clearInterval(iv);
+      MP.joining = false; MP.wantSync = true;
+      MP.raw({t:"ask"});
+      let tries = 0;
+      const again = setInterval(()=>{
+        if(!MP.wantSync || ++tries > 8){ clearInterval(again); MP.wantSync = false; return; }
+        MP.raw({t:"ask"});
+      }, 1500);
+    }, 250);
   };
+  /* หลุดแล้วกดต่อใหม่ — โหลดหน้าใหม่พร้อมรหัสห้องเดิม แล้วเข้าเองอัตโนมัติ */
+  window.__mpRejoin = ()=>{
+    location.href = location.pathname + "?room=" + encodeURIComponent(MP.room || "") + "&kb=1";
+  };
+  $("mpDropGo").addEventListener("click", ()=> window.__mpRejoin());
   $("mpSolo").addEventListener("click", ()=> $("mpLobby").classList.remove("on"));
   $("mpJoin").addEventListener("click", ()=>{
     const room = ($("mpRoom").value||"").trim().toLowerCase().replace(/[^a-z0-9\-_]/g,"");
@@ -2157,7 +2285,11 @@ window.MP = MP;
     MP.paintLobby();
   });
   $("mpReady").addEventListener("click", ()=>{ MP.ready = !MP.ready; MP.raw({t:"ready"}); MP.paintLobby(); });
-  $("mpGo").addEventListener("click", ()=>{ MP.raw({t:"go"}); window.__mpStartGame(); });
+  $("mpGo").addEventListener("click", ()=>{
+    const live = MP.alive().some(p=>p.inGame);       /* มีคนเล่นค้างอยู่ = เข้าไปแทรกกลางเกม */
+    if(!live) MP.raw({t:"go"});
+    window.__mpStartGame(live);
+  });
   $("mpLeave").addEventListener("click", ()=>{ location.href = location.pathname; });
   $("mpCopy").addEventListener("click", ()=>{
     const room = ($("mpRoom").value||"").trim().toLowerCase().replace(/[^a-z0-9\-_]/g,"");
