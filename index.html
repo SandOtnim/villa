@@ -1975,6 +1975,8 @@ const MP = {
     if(this.on) return;
     this.room = room; this.name = (name||"ผู้เล่น").slice(0,14);
     this.me = this.myId(room); this.t0 = Date.now(); this.on = true;
+    /* รหัสสุ่มใหม่ทุกครั้งที่เปิดหน้า — ไว้จับว่า id ไปซ้ำกับเครื่องอื่นหรือเปล่า */
+    this.nonce = Math.random().toString(36).slice(2,9);
     try{ sessionStorage.setItem("villa-mp-name", this.name); }catch(e){}
     this.color = this.COLORS[Math.abs([...this.me].reduce((a,c)=>a+c.charCodeAt(0),0)) % this.COLORS.length];
 
@@ -1988,7 +1990,8 @@ const MP = {
     /* รีเลย์ที่เทสต์แล้วว่าต่อติดจริง — ถ้าปล่อยให้สุ่มเอง มักได้ตัวที่ตายแล้ว */
     const RELAYS = ["wss://nos.lol","wss://relay.mostr.pub","wss://purplerelay.com",
                     "wss://relay.nostr.place","wss://offchain.pub","wss://nostr-pub.wellorder.net",
-                    "wss://relay.froth.zone","wss://nostr.data.haus"];
+                    "wss://relay.froth.zone","wss://nostr.data.haus","wss://yabu.me/v2",
+                    "wss://relay.angor.io","wss://relay.primal.net","wss://nostr.wine"];
     for(const key of Object.keys(T)){
       try{
         const cfg = {appId:"sandotnim-villa"};
@@ -2064,7 +2067,7 @@ const MP = {
 
   raw(m){
     m._i = this.id(); m._f = this.me; m._n = this.name; m._c = this.color;
-    m._t = this.t0; m._r = this.ready; m._g = this.inGame;
+    m._t = this.t0; m._r = this.ready; m._g = this.inGame; m._z = this.nonce;
     this.seen.add(m._i);
     try{ this.bc && this.bc.postMessage(m); }catch(e){}
     for(const f of this.sends){ try{ f(m); }catch(e){} }
@@ -2072,7 +2075,17 @@ const MP = {
   act(m){ this.raw(m); this.apply(m, true); },
 
   recv(m){
-    if(!m || !m._i || m._f === this.me) return;
+    if(!m || !m._i) return;
+    if(m._f === this.me){
+      /* ข้อความของตัวเอง — ทิ้ง */
+      if(!m._z || m._z === this.nonce) return;
+      /* id ไปซ้ำกับอีกเครื่อง (เกิดตอนก๊อปแท็บ / เบราว์เซอร์กู้หน้าเดิม)
+         ถ้าไม่แก้ ทั้งคู่จะมองข้ามข้อความของกันและกัน = หากันไม่เจอ */
+      this.me = this.id();
+      try{ sessionStorage.setItem("villa-mp-me-"+this.room, this.me); }catch(e){}
+      this.raw({t:"hi"});
+      return;
+    }
     if(this.seen.has(m._i)) return;
     this.seen.add(m._i);
     if(this.seen.size > 900) this.seen = new Set([...this.seen].slice(-400));
@@ -2194,10 +2207,11 @@ const MP = {
   paintLobby(){
     const conn = $("mpConn"); if(!conn || !this.on) return;
     const ps = this.alive();
+    const wired = this.chans.some(c=>c.peers > 0);
     conn.classList.toggle("ok", ps.length > 0);
     conn.innerHTML = '<i></i>' + (ps.length
       ? ("ต่อติดแล้ว · อยู่ในห้องนี้ " + (ps.length+1) + " คน")
-      : "กำลังหาเพื่อนในห้องนี้…");
+      : (wired ? "เจอเครื่องเพื่อนแล้ว กำลังจับคู่…" : "กำลังหาเพื่อนในห้องนี้…"));
     const all = [{name:this.name+" (คุณ)", color:this.color, ready:this.ready, inGame:this.inGame}]
       .concat(this.seenLately().map(p=>({name:p.name, color:p.color, ready:p.ready,
                                           inGame:p.inGame, gone:p.gone})));
