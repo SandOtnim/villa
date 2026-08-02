@@ -1914,6 +1914,9 @@ function openSet(){
   });
   row(L("btnHowTo"), "?", ()=>{ closeM("mSet"); showNote0(L("btnHowTo"), L("howToBody")); });
   row(L("reset"), "⟲", ()=>{ if(confirm(L("resetConfirm"))){ wipe(); location.reload(); } });
+  row("เวอร์ชันเกม", MP_BUILD, ()=>{
+    navigator.clipboard && navigator.clipboard.writeText(MP_BUILD);
+  });
   openM("mSet");
 }
 function showNote0(title, body){
@@ -1945,6 +1948,7 @@ document.addEventListener("keydown", e=>{
   if(e.code==="KeyC"){ openCase(); }
 });
 
+const MP_BUILD = "20260802-1554";
 /* ============================================================
    MP — เล่นกับเพื่อน (ไม่มีเซิร์ฟเวอร์)
    ส่งพร้อมกันหลายช่อง แล้วกรองข้อความซ้ำทิ้ง
@@ -1956,25 +1960,17 @@ const MP = {
   peers:{}, seen:new Set(), q:[], sayGo:null, pendingTap:0, bc:null,
   ready:false, inGame:false, sends:[], chans:[], _stuck:0,
   joining:false, wantSync:false, wasOff:false, left:{}, dead:new Set(),
-  GONE:15000,                       /* เงียบเกิน 15 วิ = ถือว่าหลุด (เต้นหัวใจทุก 4 วิ) */
+  GONE:20000,                       /* เงียบเกิน 20 วิ = ถือว่าหลุด (เท่าเวอร์ชันที่พิสูจน์แล้วว่าใช้ได้) */
   COLORS:["#8fd6b0","#e58fc0","#d8b46a","#7fb6ff","#ff9a76","#b79aff","#6fe3d2","#f5e06a"],
 
   id(){ return Math.random().toString(36).slice(2,10); },
 
-  /* id ประจำแท็บ — กด F5 หรือหลุดแล้วเข้าใหม่ เพื่อนจะรู้ว่าเป็นคนเดิม */
-  myId(room){
-    const k = "villa-mp-me-" + room;
-    try{
-      let v = sessionStorage.getItem(k);
-      if(!v){ v = this.id(); sessionStorage.setItem(k, v); }
-      return v;
-    }catch(e){ return this.id(); }
-  },
-
   start(room, name){
     if(this.on) return;
     this.room = room; this.name = (name||"ผู้เล่น").slice(0,14);
-    this.me = this.myId(room); this.t0 = Date.now(); this.on = true;
+    /* id สุ่มใหม่ทุกครั้งที่เปิดหน้า — ห้ามเก็บลง sessionStorage เด็ดขาด
+       เพราะ Chrome ก๊อป sessionStorage ตอนก๊อปแท็บ/กู้แท็บ ทำให้ id ซ้ำ แล้วหากันไม่เจอ */
+    this.me = this.id(); this.t0 = Date.now(); this.on = true;
     /* รหัสสุ่มใหม่ทุกครั้งที่เปิดหน้า — ไว้จับว่า id ไปซ้ำกับเครื่องอื่นหรือเปล่า */
     this.nonce = Math.random().toString(36).slice(2,9);
     try{ sessionStorage.setItem("villa-mp-name", this.name); }catch(e){}
@@ -2083,7 +2079,6 @@ const MP = {
          ถ้าไม่แก้ ทั้งคู่จะมองข้ามข้อความของกันและกัน = หากันไม่เจอ */
       const old = this.me;
       this.me = this.id();
-      try{ sessionStorage.setItem("villa-mp-me-"+this.room, this.me); }catch(e){}
       this.raw({t:"hi", dropId:old});      /* บอกทุกคนว่าอย่าใช้ id เก่าของเราแล้ว */
       return;
     }
