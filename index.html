@@ -1955,7 +1955,7 @@ const MP = {
   on:false, room:null, me:null, name:"", color:"#8fd6b0", t0:0,
   peers:{}, seen:new Set(), q:[], sayGo:null, pendingTap:0, bc:null,
   ready:false, inGame:false, sends:[], chans:[], _stuck:0,
-  joining:false, wantSync:false, wasOff:false, left:{},
+  joining:false, wantSync:false, wasOff:false, left:{}, dead:new Set(),
   GONE:15000,                       /* เงียบเกิน 15 วิ = ถือว่าหลุด (เต้นหัวใจทุก 4 วิ) */
   COLORS:["#8fd6b0","#e58fc0","#d8b46a","#7fb6ff","#ff9a76","#b79aff","#6fe3d2","#f5e06a"],
 
@@ -2081,20 +2081,28 @@ const MP = {
       if(!m._z || m._z === this.nonce) return;
       /* id ไปซ้ำกับอีกเครื่อง (เกิดตอนก๊อปแท็บ / เบราว์เซอร์กู้หน้าเดิม)
          ถ้าไม่แก้ ทั้งคู่จะมองข้ามข้อความของกันและกัน = หากันไม่เจอ */
+      const old = this.me;
       this.me = this.id();
       try{ sessionStorage.setItem("villa-mp-me-"+this.room, this.me); }catch(e){}
-      this.raw({t:"hi"});
+      this.raw({t:"hi", dropId:old});      /* บอกทุกคนว่าอย่าใช้ id เก่าของเราแล้ว */
       return;
     }
     if(this.seen.has(m._i)) return;
     this.seen.add(m._i);
     if(this.seen.size > 900) this.seen = new Set([...this.seen].slice(-400));
+    /* เพื่อนเปลี่ยน id ใหม่ (id เคยชนกัน) — ลบชื่อผีของ id เก่าทิ้ง */
+    if(m.dropId){
+      this.dead.add(m.dropId);
+      if(this.peers[m.dropId]){ delete this.peers[m.dropId]; this.status(); }
+    }
+    if(this.dead.has(m._f)) return;
     const p = this.peers[m._f];
     if(!p){
+      const ซ้ำชื่อ = Object.values(this.peers).some(x => x.name === m._n);
       this.peers[m._f] = {id:m._f, name:m._n, color:m._c, t0:m._t||Date.now(),
                           t:Date.now(), ready:!!m._r, inGame:!!m._g, gone:false};
       const back = this.left[m._n] && (Date.now() - this.left[m._n] < 1800000);
-      this.toast(m._n + (back ? " กลับเข้ามาแล้ว" : " เข้าห้องมาแล้ว"), m._c);
+      if(!ซ้ำชื่อ) this.toast(m._n + (back ? " กลับเข้ามาแล้ว" : " เข้าห้องมาแล้ว"), m._c);
       this.raw({t:"hi"});
       if(this.inGame) setTimeout(()=>{ if(!busy && !this.sayGo)
         this.raw({t:"sync", S:JSON.parse(JSON.stringify(S))}); }, 400);
